@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#283618" />
+    <title>Mail Explorer</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/static/style.css" />
+    <script src="/static/app.js" defer></script>
+  </head>
+  <body>
+    <svg
+      class="icon-library"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <defs>
+        <symbol id="icon-mail" viewBox="0 0 24 24">
+          <rect x="3" y="5" width="18" height="14" rx="3" />
+          <path d="m3 7 9 6 9-6" />
+        </symbol>
+        <symbol id="icon-archive" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="5" rx="1.5" />
+          <path d="M5 8v11a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8M10 12h4" />
+        </symbol>
+        <symbol id="icon-search" viewBox="0 0 24 24">
+          <circle cx="10.5" cy="10.5" r="6.5" />
+          <path d="m16 16 4.5 4.5" />
+        </symbol>
+        <symbol id="icon-sidebar" viewBox="0 0 24 24">
+          <rect x="3" y="4" width="18" height="16" rx="2.5" />
+          <path d="M9 4v16M5.5 8h1M5.5 11h1M5.5 14h1" />
+        </symbol>
+        <symbol id="icon-refresh" viewBox="0 0 24 24">
+          <path
+            d="M20 7v5h-5M4 17v-5h5M6.1 6.1A8 8 0 0 1 20 12M4 12a8 8 0 0 0 13.9 5.9"
+          />
+        </symbol>
+        <symbol id="icon-arrow-left" viewBox="0 0 24 24">
+          <path d="m12 5-7 7 7 7M5 12h15" />
+        </symbol>
+        <symbol id="icon-arrow-right" viewBox="0 0 24 24">
+          <path d="m12 5 7 7-7 7M19 12H4" />
+        </symbol>
+        <symbol id="icon-chevron" viewBox="0 0 24 24">
+          <path d="m6 9 6 6 6-6" />
+        </symbol>
+        <symbol id="icon-download" viewBox="0 0 24 24">
+          <path
+            d="M12 3v12m-5-5 5 5 5-5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"
+          />
+        </symbol>
+        <symbol id="icon-lock" viewBox="0 0 24 24">
+          <rect x="5" y="10" width="14" height="11" rx="2.5" />
+          <path d="M8 10V6a4 4 0 0 1 8 0v4M12 14v3" />
+        </symbol>
+        <symbol id="icon-keyboard" viewBox="0 0 24 24">
+          <rect x="2" y="5" width="20" height="14" rx="3" />
+          <path
+            d="M6 9h.01M10 9h.01M14 9h.01M18 9h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 15h10"
+          />
+        </symbol>
+        <symbol id="icon-close" viewBox="0 0 24 24">
+          <path d="m6 6 12 12M6 18 18 6" />
+        </symbol>
+        <symbol id="icon-paperclip" viewBox="0 0 24 24">
+          <path
+            d="m9 13 7-7a3 3 0 0 1 4 4L9 21a5 5 0 0 1-7-7L13 3a4 4 0 0 1 6 6L8 20"
+          />
+        </symbol>
+        <symbol id="icon-thread" viewBox="0 0 24 24">
+          <path d="M4 4h16v11H9l-5 4V4ZM9 8h6M9 11h4" />
+        </symbol>
+      </defs>
+    </svg>
+    <a href="#search" class="skip-link">Skip to archive search</a>
+    <button
+      id="sidebar-backdrop"
+      class="sidebar-backdrop"
+      tabindex="-1"
+      aria-label="Close archives"
+      hidden
+    ></button>
+    <main class="workspace" id="workspace">
+      <aside id="sidebar" class="sidebar" aria-label="Archives">
+        <div class="sidebar-brand">
+          <a class="brand" href="/" aria-label="Mail Explorer home">
+            <span class="brand-icon" aria-hidden="true"
+              ><svg viewBox="0 0 32 32">
+                <rect x="5" y="9" width="22" height="17" rx="4" />
+                <path d="m5 11 11 8 11-8M20 5h7v7M27 5l-9 9" /></svg
+            ></span>
+          </a>
+          <button
+            id="sidebar-close"
+            class="icon-button sidebar-close"
+            aria-label="Hide archives"
+            title="Hide archives"
+          >
+            <svg class="icon"><use href="#icon-sidebar" /></svg>
+          </button>
+        </div>
+        <div class="sidebar-content">
+          <div class="sidebar-heading">
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-archive" />
+            </svg>
+            <h1>Your archives</h1>
+          </div>
+          <p class="sidebar-intro">All your mail. A little more clarity.</p>
+          <label class="field-label" for="mailbox-select"
+            >Current archive</label
+          >
+          <div class="select-wrap">
+            <select id="mailbox-select" aria-label="Select mailbox">
+              <option>Finding archives…</option></select
+            ><svg class="icon" aria-hidden="true">
+              <use href="#icon-chevron" />
+            </svg>
+          </div>
+          <div class="archive-card">
+            <div class="archive-icon" aria-hidden="true">
+              <svg class="icon"><use href="#icon-archive" /></svg>
+            </div>
+            <div>
+              <div id="archive-name" class="archive-name">
+                No archive selected
+              </div>
+              <div id="archive-size" class="small muted">
+                Files stay on your computer
+              </div>
+            </div>
+          </div>
+          <section class="archive-overview" aria-label="Archive overview">
+            <div class="section-eyebrow">At a glance</div>
+            <div class="archive-totals">
+              <div>
+                <strong id="message-count">—</strong><span>Messages</span>
+              </div>
+              <div>
+                <strong id="thread-count">—</strong><span>Conversations</span>
+              </div>
+            </div>
+          </section>
+          <section
+            id="index-card"
+            class="index-card"
+            aria-label="Archive progress"
+          >
+            <div class="index-top">
+              <span class="field-label">Archive progress</span
+              ><span id="index-percent">0%</span>
+            </div>
+            <progress
+              id="index-progress"
+              max="1"
+              value="0"
+              aria-label="Indexing progress"
+            ></progress>
+            <div id="index-state" role="status" class="index-state">
+              Ready to explore
+            </div>
+            <div class="index-stat">
+              <span>Scanned</span><strong id="scanned-size">—</strong>
+            </div>
+            <button
+              id="index-toggle"
+              class="button primary full-width"
+              disabled
+            >
+              Start indexing
+            </button>
+            <p class="index-help">
+              Explore while your archive is indexed.<br />Pause anytime. Your
+              progress is saved.
+            </p>
+          </section>
+        </div>
+      </aside>
+      <section class="mail-panel" aria-label="Message list">
+        <div class="mail-toolbar">
+          <div class="panel-topline">
+            <button
+              id="sidebar-toggle"
+              class="icon-button"
+              aria-label="Toggle archives"
+              aria-controls="sidebar"
+              aria-expanded="true"
+              title="Toggle archives"
+            >
+              <svg class="icon"><use href="#icon-sidebar" /></svg>
+            </button>
+            <div class="mail-heading">
+              <h2 id="view-heading">Threads</h2>
+              <span id="list-count" class="count-pill">0</span>
+            </div>
+            <button
+              id="refresh"
+              class="icon-button"
+              aria-label="Refresh archive"
+              title="Refresh archive"
+            >
+              <svg class="icon"><use href="#icon-refresh" /></svg>
+            </button>
+          </div>
+          <form id="search-form" role="search">
+            <div class="search-box">
+              <svg class="icon" aria-hidden="true">
+                <use href="#icon-search" /></svg
+              ><input
+                id="search"
+                type="search"
+                autocomplete="off"
+                maxlength="200"
+                placeholder="Search your archive"
+                aria-label="Search subjects, senders and recipients"
+              /><kbd aria-hidden="true">/</kbd>
+            </div>
+          </form>
+          <div class="view-toggle" role="group" aria-label="Browse by">
+            <button id="view-threads" class="active" aria-pressed="true">
+              <svg class="icon" aria-hidden="true">
+                <use href="#icon-thread" /></svg
+              >Threads</button
+            ><button id="view-messages" aria-pressed="false">
+              <svg class="icon" aria-hidden="true">
+                <use href="#icon-mail" /></svg
+              >Messages
+            </button>
+          </div>
+          <div class="list-meta">
+            <span id="view-order">Latest activity first</span
+            ><span id="list-label" class="sr-only"
+              >Subject, sender, or recipient</span
+            >
+          </div>
+        </div>
+        <div
+          id="message-list"
+          class="message-list"
+          role="region"
+          aria-label="Messages"
+          tabindex="-1"
+        ></div>
+        <div id="list-empty" class="list-empty" role="status">
+          <svg class="icon" aria-hidden="true"><use href="#icon-archive" /></svg
+          ><strong>Your archive is on its way</strong>
+          <p>Messages will appear here as they are indexed.</p>
+        </div>
+        <footer class="pagination">
+          <button id="previous" class="button secondary" disabled>
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-arrow-left" /></svg
+            >Previous</button
+          ><span id="page-label">Page 1</span
+          ><button id="next" class="button secondary" disabled>
+            Next<svg class="icon" aria-hidden="true">
+              <use href="#icon-arrow-right" />
+            </svg>
+          </button>
+        </footer>
+      </section>
+      <section class="reader" aria-label="Message reader" tabindex="-1">
+        <div class="reader-toolbar">
+          <button
+            id="reader-back"
+            class="button text-button"
+            aria-label="Back to message list"
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-arrow-left" /></svg
+            >Back
+          </button>
+          <span class="reader-label"
+            ><svg class="icon" aria-hidden="true"><use href="#icon-mail" /></svg
+            >Reading pane</span
+          >
+          <button
+            id="shortcuts-open"
+            class="icon-button"
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts"
+          >
+            <svg class="icon"><use href="#icon-keyboard" /></svg>
+          </button>
+        </div>
+        <div class="reader-scroll" id="reader-scroll">
+          <div id="reader-empty" class="reader-empty">
+            <svg
+              class="empty-illustration"
+              viewBox="0 0 280 220"
+              fill="none"
+              aria-hidden="true"
+            >
+              <ellipse
+                cx="145"
+                cy="196"
+                rx="94"
+                ry="8"
+                fill="currentColor"
+                opacity=".055"
+              />
+              <path
+                d="M48 75a9 9 0 0 1 9-9h51l13 14h102a9 9 0 0 1 9 9v85a10 10 0 0 1-10 10H58a10 10 0 0 1-10-10V75Z"
+                fill="#606C38"
+              />
+              <g transform="rotate(8 148 102)">
+                <rect
+                  x="111"
+                  y="30"
+                  width="95"
+                  height="126"
+                  rx="7"
+                  fill="#FEFAE0"
+                  stroke="#DAD5AF"
+                />
+                <rect
+                  x="124"
+                  y="47"
+                  width="25"
+                  height="6"
+                  rx="3"
+                  fill="#DDA15E"
+                />
+                <path
+                  d="M124 71h59M124 83h59M124 95h40"
+                  stroke="#B5BA9A"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                />
+              </g>
+              <g transform="rotate(-8 118 117)">
+                <rect
+                  x="71"
+                  y="53"
+                  width="99"
+                  height="121"
+                  rx="7"
+                  fill="#FFFEF7"
+                  stroke="#DAD5AF"
+                />
+                <rect
+                  x="85"
+                  y="68"
+                  width="24"
+                  height="24"
+                  rx="5"
+                  fill="#ECEEDC"
+                />
+                <path
+                  d="M90 76h14v9H90v-9Zm0 1 7 4 7-4"
+                  stroke="#606C38"
+                  stroke-width="1.4"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M85 106h68M85 119h68M85 132h44"
+                  stroke="#D8DBC5"
+                  stroke-width="3"
+                  stroke-linecap="round"
+                />
+              </g>
+              <path
+                d="M41 112a9 9 0 0 1 9-10h181a9 9 0 0 1 9 10l-8 65a12 12 0 0 1-12 11H61a12 12 0 0 1-12-11l-8-65Z"
+                fill="#DDA15E"
+                stroke="#CC9253"
+              />
+              <path
+                d="M61 115h158"
+                stroke="#FEFAE0"
+                stroke-opacity=".3"
+                stroke-linecap="round"
+              />
+              <rect
+                x="112"
+                y="132"
+                width="56"
+                height="31"
+                rx="5"
+                fill="#FEFAE0"
+                fill-opacity=".87"
+              />
+              <path
+                d="M125 142h30M130 152h20"
+                stroke="#606C38"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              />
+              <circle cx="225" cy="62" r="17" fill="#BC6C25" />
+              <path
+                d="m219 62 4 4 8-8"
+                stroke="#FEFAE0"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <h2>Your archive, in focus.</h2>
+            <p>
+              Select a conversation to revisit the details.<br />Everything you
+              need is already here.
+            </p>
+            <div class="shortcut-hint">
+              <span><kbd>↑</kbd><kbd>↓</kbd> Browse messages</span
+              ><span><kbd>/</kbd> Search the archive</span>
+            </div>
+          </div>
+          <article id="conversation" hidden>
+            <div class="reader-topline">
+              <span class="section-eyebrow">Conversation</span
+              ><button id="conversation-refresh" class="button secondary">
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-refresh" /></svg
+                >Refresh
+              </button>
+            </div>
+            <h2
+              id="conversation-subject"
+              class="detail-subject"
+              tabindex="-1"
+            ></h2>
+            <p class="conversation-meta">
+              <strong id="conversation-count"></strong><span>Oldest first</span
+              ><span>Expand a message to read</span>
+            </p>
+            <div id="conversation-messages"></div>
+            <footer class="pagination conversation-pagination">
+              <button
+                id="conversation-previous"
+                class="button secondary"
+                disabled
+              >
+                <svg class="icon" aria-hidden="true">
+                  <use href="#icon-arrow-left" /></svg
+                >Previous</button
+              ><span id="conversation-page">Page 1</span
+              ><button id="conversation-next" class="button secondary" disabled>
+                Next<svg class="icon" aria-hidden="true">
+                  <use href="#icon-arrow-right" />
+                </svg>
+              </button>
+            </footer>
+          </article>
+          <article id="message-detail" hidden></article>
+          <template id="message-template">
+            <div class="message-content">
+              <div class="reader-topline">
+                <span class="section-eyebrow"
+                  >Message <span data-field="detail-number"></span></span
+                ><a data-field="download" class="button secondary" download
+                  ><svg class="icon" aria-hidden="true">
+                    <use href="#icon-download" /></svg
+                  >Download .eml</a
+                >
+              </div>
+              <h2
+                data-field="detail-subject"
+                class="detail-subject"
+                tabindex="-1"
+              ></h2>
+              <div class="sender-row">
+                <div
+                  data-field="sender-avatar"
+                  class="avatar"
+                  aria-hidden="true"
+                ></div>
+                <div class="sender-info">
+                  <strong data-field="detail-sender"></strong>
+                  <div data-field="detail-date" class="muted small"></div>
+                </div>
+                <span data-field="detail-size" class="size-pill"></span>
+              </div>
+              <dl class="message-addresses">
+                <dt>To</dt>
+                <dd data-field="detail-to"></dd>
+              </dl>
+              <div data-field="attachment-list" class="attachments"></div>
+              <div
+                class="reader-tabs"
+                role="tablist"
+                aria-label="Message format"
+              >
+                <button
+                  class="tab active"
+                  data-tab="text"
+                  role="tab"
+                  aria-selected="true"
+                >
+                  Text</button
+                ><button
+                  class="tab"
+                  data-tab="html"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  HTML</button
+                ><button
+                  class="tab"
+                  data-tab="headers"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
+                >
+                  Headers
+                </button>
+              </div>
+              <p data-field="preview-note" class="preview-note" hidden></p>
+              <pre
+                data-field="body-text"
+                class="body-text"
+                role="tabpanel"
+                tabindex="0"
+              ></pre>
+              <iframe
+                data-field="body-html"
+                title="Isolated HTML email preview"
+                sandbox=""
+                referrerpolicy="no-referrer"
+                hidden
+              ></iframe>
+              <dl
+                data-field="body-headers"
+                class="body-headers"
+                role="tabpanel"
+                tabindex="0"
+                hidden
+              ></dl>
+            </div>
+          </template>
+        </div>
+        <footer class="reader-footer">
+          <svg class="icon" aria-hidden="true"><use href="#icon-lock" /></svg
+          ><span>Private, local, and yours.</span>
+        </footer>
+      </section>
+    </main>
+    <dialog id="shortcuts-dialog" aria-labelledby="shortcuts-title">
+      <div class="dialog-heading">
+        <h2 id="shortcuts-title">Keyboard shortcuts</h2>
+        <button
+          id="shortcuts-close"
+          class="icon-button"
+          aria-label="Close keyboard shortcuts"
+        >
+          <svg class="icon"><use href="#icon-close" /></svg>
+        </button>
+      </div>
+      <dl class="shortcut-list">
+        <div>
+          <dt>Search the archive</dt>
+          <dd><kbd>/</kbd></dd>
+        </div>
+        <div>
+          <dt>Next or previous message</dt>
+          <dd><kbd>↑</kbd><kbd>↓</kbd></dd>
+        </div>
+        <div>
+          <dt>Back to message list</dt>
+          <dd><kbd>Esc</kbd></dd>
+        </div>
+        <div>
+          <dt>Show these shortcuts</dt>
+          <dd><kbd>?</kbd></dd>
+        </div>
+      </dl>
+      <p class="muted small">
+        Browsing shortcuts work when you’re not typing in a field.
+      </p>
+    </dialog>
+    <div id="toast" class="toast" role="alert" hidden>
+      <span id="toast-message"></span
+      ><button id="toast-close" class="icon-button" aria-label="Dismiss error">
+        <svg class="icon"><use href="#icon-close" /></svg>
+      </button>
+    </div>
+  </body>
+</html>

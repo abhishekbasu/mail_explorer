@@ -13,3 +13,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Local indexes and test output
+.mail-explorer/
+.pytest_cache/
+.ruff_cache/
