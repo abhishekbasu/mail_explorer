@@ -8,7 +8,10 @@ from html import escape
 from html.parser import HTMLParser
 from pathlib import Path
 
+from .attachments import attachments
 from .config import Settings
+from .markdown import markdown_preview
+from .quotes import html_quote_kind, merge_parts, text_parts
 
 HTML_TAGS = frozenset(
     {
@@ -113,6 +116,8 @@ class SafeHTML(HTMLParser):
                 )
             ):
                 safe_attrs.append(f' {name}="{escape(value, quote=True)}"')
+        if quote_kind := html_quote_kind(tag, attrs):
+            safe_attrs.append(f' data-mail-quote="{quote_kind}"')
         self.parts.append(f"<{tag}{''.join(safe_attrs)}>")
         if tag == "style":
             self.in_style = True
@@ -149,24 +154,41 @@ class HTMLText(HTMLParser):
         self.length = 0
         self.parts: list[str] = []
         self.hidden = 0
+        self.quoted: list[bool] = []
+        self.elements = [("", False, False)]
 
     def handle_starttag(self, tag: str, attrs) -> None:
+        kind = html_quote_kind(tag, attrs)
+        if kind == "tail":
+            parent, quoted, _ = self.elements[-1]
+            self.elements[-1] = (parent, quoted, True)
+        parent_quoted = self.elements[-1][1] or self.elements[-1][2]
+        if tag not in {"br", "hr", "img", "meta", "input", "col", "link", "wbr"}:
+            self.elements.append((tag, parent_quoted or kind == "block", False))
         if tag in {"script", "style"}:
             self.hidden += 1
-        elif tag in {"br", "p", "div", "tr", "li", "h1", "h2", "h3"}:
+        elif tag in {"br", "p", "div", "tr", "li", "h1", "h2", "h3", "blockquote"}:
             self.handle_data("\n")
 
     def handle_endtag(self, tag: str) -> None:
         if tag in {"script", "style"}:
             self.hidden = max(0, self.hidden - 1)
-        elif tag in {"p", "div", "tr", "li"}:
+        elif tag in {"p", "div", "tr", "li", "blockquote"}:
             self.handle_data("\n")
+        for index in range(len(self.elements) - 1, 0, -1):
+            if self.elements[index][0] == tag:
+                del self.elements[index:]
+                break
 
     def handle_data(self, data: str) -> None:
         if not self.hidden and self.length < self.limit:
             data = data[: self.limit - self.length]
             self.parts.append(data)
+            self.quoted.append(self.elements[-1][1] or self.elements[-1][2])
             self.length += len(data)
+
+    def segments(self) -> list[dict]:
+        return merge_parts(zip(self.parts, self.quoted), strip=True)
 
 
 def decode_text(part: EmailMessage | None, limit: int) -> tuple[str, bool]:
@@ -191,19 +213,13 @@ def preview(path: Path, record: dict, settings: Settings) -> dict:
     message = BytesParser(policy=policy.default).parsebytes(raw)
     plain, plain_cut = decode_text(message.get_body(preferencelist=("plain",)), settings.text_chars)
     html, html_cut = decode_text(message.get_body(preferencelist=("html",)), settings.text_chars)
+    plain_parts = text_parts(plain)
     if not plain and html:
         parser = HTMLText(settings.text_chars)
         parser.feed(html)
         plain = "".join(parser.parts).strip()
-    attachments = []
-    for part in message.walk():
-        if part.get_content_disposition() == "attachment" or part.get_filename():
-            attachments.append(
-                {
-                    "name": str(part.get_filename() or "Unnamed attachment")[:4096],
-                    "content_type": part.get_content_type(),
-                }
-            )
+        plain_parts = parser.segments()
+    markdown, markdown_parts, markdown_cut = markdown_preview(plain, html, settings.text_chars)
     return {
         "id": record["id"],
         "subject": record["subject"],
@@ -212,10 +228,13 @@ def preview(path: Path, record: dict, settings: Settings) -> dict:
         "date": record["date"],
         "size": size,
         "body_text": plain,
+        "body_text_parts": plain_parts,
         "body_html": safe_html(html),
+        "body_markdown": markdown,
+        "body_markdown_parts": markdown_parts,
         "headers": [{"name": name, "value": str(value)[:4096]} for name, value in message.items()],
-        "attachments": attachments,
-        "truncated": size > settings.preview_bytes or plain_cut or html_cut,
+        "attachments": [item.metadata() for item in attachments(path, record, settings)],
+        "truncated": size > settings.preview_bytes or plain_cut or html_cut or markdown_cut,
         "preview_limit": settings.preview_bytes,
     }
 

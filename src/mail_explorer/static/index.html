@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="color-scheme" content="light dark" />
-    <meta name="theme-color" content="#283618" />
+    <meta name="theme-color" content="#03045e" />
     <title>Mail Explorer</title>
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/static/style.css" />
@@ -44,6 +44,9 @@
         <symbol id="icon-arrow-right" viewBox="0 0 24 24">
           <path d="m12 5 7 7-7 7M19 12H4" />
         </symbol>
+        <symbol id="icon-order" viewBox="0 0 24 24">
+          <path d="M12 19V5m-5 5 5-5 5 5" />
+        </symbol>
         <symbol id="icon-chevron" viewBox="0 0 24 24">
           <path d="m6 9 6 6 6-6" />
         </symbol>
@@ -51,6 +54,10 @@
           <path
             d="M12 3v12m-5-5 5 5 5-5M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"
           />
+        </symbol>
+        <symbol id="icon-copy" viewBox="0 0 24 24">
+          <rect x="8" y="8" width="12" height="13" rx="2" />
+          <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
         </symbol>
         <symbol id="icon-lock" viewBox="0 0 24 24">
           <rect x="5" y="10" width="14" height="11" rx="2.5" />
@@ -83,7 +90,20 @@
       aria-label="Close archives"
       hidden
     ></button>
-    <main class="workspace" id="workspace">
+    <main class="workspace sidebar-collapsed" id="workspace">
+      <div id="sidebar-rail" class="sidebar-rail">
+        <button
+          id="sidebar-reveal"
+          class="icon-button"
+          aria-label="Show archives"
+          aria-controls="sidebar"
+          aria-expanded="false"
+          title="Show archives"
+        >
+          <svg class="icon"><use href="#icon-archive" /></svg>
+        </button>
+        <span class="rail-label" aria-hidden="true">Archives</span>
+      </div>
       <aside id="sidebar" class="sidebar" aria-label="Archives">
         <div class="sidebar-brand">
           <a class="brand" href="/" aria-label="Mail Explorer home">
@@ -177,6 +197,15 @@
               progress is saved.
             </p>
           </section>
+          <button
+            id="shortcuts-open"
+            class="button sidebar-shortcuts full-width"
+          >
+            <svg class="icon" aria-hidden="true">
+              <use href="#icon-keyboard" />
+            </svg>
+            Keyboard shortcuts
+          </button>
         </div>
       </aside>
       <section class="mail-panel" aria-label="Message list">
@@ -187,7 +216,7 @@
               class="icon-button"
               aria-label="Toggle archives"
               aria-controls="sidebar"
-              aria-expanded="true"
+              aria-expanded="false"
               title="Toggle archives"
             >
               <svg class="icon"><use href="#icon-sidebar" /></svg>
@@ -249,17 +278,9 @@
           ><strong>Your archive is on its way</strong>
           <p>Messages will appear here as they are indexed.</p>
         </div>
-        <footer class="pagination">
-          <button id="previous" class="button secondary" disabled>
-            <svg class="icon" aria-hidden="true">
-              <use href="#icon-arrow-left" /></svg
-            >Previous</button
-          ><span id="page-label">Page 1</span
-          ><button id="next" class="button secondary" disabled>
-            Next<svg class="icon" aria-hidden="true">
-              <use href="#icon-arrow-right" />
-            </svg>
-          </button>
+        <footer class="list-position">
+          <span id="list-range" title="Visible conversations">0 shown</span>
+          <span id="list-loading" role="status" hidden>Loading…</span>
         </footer>
       </section>
       <section class="reader" aria-label="Message reader" tabindex="-1">
@@ -272,18 +293,6 @@
             <svg class="icon" aria-hidden="true">
               <use href="#icon-arrow-left" /></svg
             >Back
-          </button>
-          <span class="reader-label"
-            ><svg class="icon" aria-hidden="true"><use href="#icon-mail" /></svg
-            >Reading pane</span
-          >
-          <button
-            id="shortcuts-open"
-            class="icon-button"
-            aria-label="Keyboard shortcuts"
-            title="Keyboard shortcuts"
-          >
-            <svg class="icon"><use href="#icon-keyboard" /></svg>
           </button>
         </div>
         <div class="reader-scroll" id="reader-scroll">
@@ -304,7 +313,7 @@
               />
               <path
                 d="M48 75a9 9 0 0 1 9-9h51l13 14h102a9 9 0 0 1 9 9v85a10 10 0 0 1-10 10H58a10 10 0 0 1-10-10V75Z"
-                fill="#606C38"
+                fill="#0077b6"
               />
               <g transform="rotate(8 148 102)">
                 <rect
@@ -313,8 +322,8 @@
                   width="95"
                   height="126"
                   rx="7"
-                  fill="#FEFAE0"
-                  stroke="#DAD5AF"
+                  fill="#caf0f8"
+                  stroke="#90e0ef"
                 />
                 <rect
                   x="124"
@@ -322,11 +331,11 @@
                   width="25"
                   height="6"
                   rx="3"
-                  fill="#DDA15E"
+                  fill="#48cae4"
                 />
                 <path
                   d="M124 71h59M124 83h59M124 95h40"
-                  stroke="#B5BA9A"
+                  stroke="#90e0ef"
                   stroke-width="3"
                   stroke-linecap="round"
                 />
@@ -338,8 +347,8 @@
                   width="99"
                   height="121"
                   rx="7"
-                  fill="#FFFEF7"
-                  stroke="#DAD5AF"
+                  fill="#f4fbfd"
+                  stroke="#90e0ef"
                 />
                 <rect
                   x="85"
@@ -347,29 +356,29 @@
                   width="24"
                   height="24"
                   rx="5"
-                  fill="#ECEEDC"
+                  fill="#ade8f4"
                 />
                 <path
                   d="M90 76h14v9H90v-9Zm0 1 7 4 7-4"
-                  stroke="#606C38"
+                  stroke="#0077b6"
                   stroke-width="1.4"
                   stroke-linejoin="round"
                 />
                 <path
                   d="M85 106h68M85 119h68M85 132h44"
-                  stroke="#D8DBC5"
+                  stroke="#90e0ef"
                   stroke-width="3"
                   stroke-linecap="round"
                 />
               </g>
               <path
                 d="M41 112a9 9 0 0 1 9-10h181a9 9 0 0 1 9 10l-8 65a12 12 0 0 1-12 11H61a12 12 0 0 1-12-11l-8-65Z"
-                fill="#DDA15E"
-                stroke="#CC9253"
+                fill="#48cae4"
+                stroke="#0096c7"
               />
               <path
                 d="M61 115h158"
-                stroke="#FEFAE0"
+                stroke="#caf0f8"
                 stroke-opacity=".3"
                 stroke-linecap="round"
               />
@@ -379,19 +388,19 @@
                 width="56"
                 height="31"
                 rx="5"
-                fill="#FEFAE0"
+                fill="#caf0f8"
                 fill-opacity=".87"
               />
               <path
                 d="M125 142h30M130 152h20"
-                stroke="#606C38"
+                stroke="#0077b6"
                 stroke-width="2.5"
                 stroke-linecap="round"
               />
-              <circle cx="225" cy="62" r="17" fill="#BC6C25" />
+              <circle cx="225" cy="62" r="17" fill="#0096c7" />
               <path
                 d="m219 62 4 4 8-8"
-                stroke="#FEFAE0"
+                stroke="#caf0f8"
                 stroke-width="2"
                 stroke-linecap="round"
                 stroke-linejoin="round"
@@ -421,10 +430,24 @@
               class="detail-subject"
               tabindex="-1"
             ></h2>
-            <p class="conversation-meta">
-              <strong id="conversation-count"></strong><span>Oldest first</span
-              ><span>Expand a message to read</span>
-            </p>
+            <div class="conversation-meta">
+              <strong id="conversation-count"></strong>
+              <button
+                id="conversation-order"
+                class="button secondary"
+                type="button"
+                title="Show newest first"
+              >
+                <span id="conversation-order-label">Oldest first</span>
+                <svg
+                  id="conversation-order-arrow"
+                  class="icon"
+                  aria-hidden="true"
+                >
+                  <use href="#icon-order" />
+                </svg>
+              </button>
+            </div>
             <div id="conversation-messages"></div>
             <footer class="pagination conversation-pagination">
               <button
@@ -448,12 +471,66 @@
             <div class="message-content">
               <div class="reader-topline">
                 <span class="section-eyebrow"
-                  >Message <span data-field="detail-number"></span></span
-                ><a data-field="download" class="button secondary" download
-                  ><svg class="icon" aria-hidden="true">
-                    <use href="#icon-download" /></svg
-                  >Download .eml</a
-                >
+                  >Message <span data-field="detail-number"></span
+                ></span>
+                <div class="message-actions">
+                  <button
+                    data-field="copy"
+                    class="button secondary"
+                    type="button"
+                  >
+                    <svg class="icon" aria-hidden="true">
+                      <use href="#icon-copy" />
+                    </svg>
+                    <span data-field="copy-label">Copy</span>
+                    <svg
+                      data-field="copy-chevron"
+                      class="icon copy-chevron"
+                      aria-hidden="true"
+                      hidden
+                    >
+                      <use href="#icon-chevron" />
+                    </svg>
+                  </button>
+                  <div
+                    data-field="copy-options"
+                    class="copy-options"
+                    popover="auto"
+                    role="menu"
+                    aria-label="Copy options"
+                  >
+                    <button
+                      data-field="copy-without-quotes"
+                      type="button"
+                      role="menuitem"
+                      tabindex="-1"
+                    >
+                      Copy without quoted text
+                    </button>
+                    <button
+                      data-field="copy-with-quotes"
+                      type="button"
+                      role="menuitem"
+                      tabindex="-1"
+                    >
+                      Copy with quoted text
+                    </button>
+                  </div>
+                  <a
+                    data-field="original-download"
+                    class="button secondary"
+                    download
+                    title="Download original email"
+                    aria-label="Download original .eml"
+                  >
+                    Original .eml
+                  </a>
+                  <span
+                    data-field="copy-status"
+                    class="sr-only"
+                    role="status"
+                  ></span>
+                </div>
               </div>
               <h2
                 data-field="detail-subject"
@@ -484,9 +561,17 @@
               >
                 <button
                   class="tab active"
-                  data-tab="text"
+                  data-tab="markdown"
                   role="tab"
                   aria-selected="true"
+                >
+                  Markdown</button
+                ><button
+                  class="tab"
+                  data-tab="text"
+                  role="tab"
+                  aria-selected="false"
+                  tabindex="-1"
                 >
                   Text</button
                 ><button
@@ -508,12 +593,19 @@
                 </button>
               </div>
               <p data-field="preview-note" class="preview-note" hidden></p>
-              <pre
-                data-field="body-text"
-                class="body-text"
+              <div
+                data-field="body-markdown"
+                class="body-markdown"
                 role="tabpanel"
                 tabindex="0"
-              ></pre>
+              ></div>
+              <div
+                data-field="body-text"
+                class="body-text-content"
+                role="tabpanel"
+                tabindex="0"
+                hidden
+              ></div>
               <iframe
                 data-field="body-html"
                 title="Isolated HTML email preview"
@@ -531,12 +623,33 @@
             </div>
           </template>
         </div>
-        <footer class="reader-footer">
-          <svg class="icon" aria-hidden="true"><use href="#icon-lock" /></svg
-          ><span>Private, local, and yours.</span>
-        </footer>
       </section>
     </main>
+    <dialog
+      id="attachment-dialog"
+      class="attachment-dialog"
+      aria-labelledby="attachment-title"
+    >
+      <div class="dialog-heading">
+        <h2 id="attachment-title">Image attachment</h2>
+        <button
+          id="attachment-close"
+          class="icon-button"
+          aria-label="Close image preview"
+          autofocus
+        >
+          <svg class="icon"><use href="#icon-close" /></svg>
+        </button>
+      </div>
+      <p id="attachment-status" class="muted small" role="status"></p>
+      <div id="attachment-preview" class="attachment-preview"></div>
+      <div class="attachment-actions">
+        <a id="attachment-download" class="button secondary" download>
+          <svg class="icon"><use href="#icon-download" /></svg>
+          Download attachment
+        </a>
+      </div>
+    </dialog>
     <dialog id="shortcuts-dialog" aria-labelledby="shortcuts-title">
       <div class="dialog-heading">
         <h2 id="shortcuts-title">Keyboard shortcuts</h2>

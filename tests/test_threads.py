@@ -206,6 +206,41 @@ def test_thread_search_matches_any_reply_and_cursor_pagination_is_stable(tmp_pat
     assert [item["id"] for item in first["items"] + second["items"]] == [1, 2, 3]
 
 
+@pytest.mark.parametrize(
+    "order, expected", [("oldest", [3, 2, 5, 4, 1, 6]), ("newest", [6, 1, 4, 5, 2, 3])]
+)
+def test_thread_message_sorting_is_global_and_cursor_pagination_has_no_gaps(
+    archive, order, expected
+):
+    app, catalog, mailbox_id, path, _ = archive
+    dates = [
+        "Sat, 3 Oct 2026 10:00:00 +0000",
+        "Thu, 1 Oct 2026 10:00:00 +0000",
+        "invalid",
+        "Fri, 2 Oct 2026 10:00:00 +0000",
+        "Thu, 1 Oct 2026 10:00:00 +0000",
+        "Sat, 3 Oct 2026 10:00:00 +0000",
+    ]
+    write_thread_mailbox(path, [{"X-GM-THRID": "1234", "Date": date} for date in dates])
+    with TestClient(app) as client:
+        base = f"/api/mailboxes/{mailbox_id}"
+        client.post(base + "/index")
+        catalog.get(mailbox_id)._thread.join(timeout=5)
+        thread_id = client.get(base + "/threads").json()["items"][0]["id"]
+        endpoint = f"{base}/threads/{thread_id}/messages"
+        after, ids = "", []
+        while after is not None:
+            response = client.get(endpoint, params={"limit": 2, "order": order, "after": after})
+            assert response.status_code == 200
+            page = response.json()
+            assert page["thread"]["message_count"] == 6
+            ids.extend(item["id"] for item in page["items"])
+            after = page["next_cursor"]
+        assert ids == expected
+        assert [item["id"] for item in client.get(endpoint).json()["items"]] == [3, 2, 5, 4, 1, 6]
+        assert client.get(endpoint, params={"order": "invalid"}).status_code == 422
+
+
 def test_migration_preserves_offsets_and_search_without_rescanning_bodies(archive, monkeypatch):
     _, catalog, mailbox_id, path, settings = archive
     create_legacy_cache(path, mailbox_id, settings)

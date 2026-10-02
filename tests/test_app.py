@@ -31,7 +31,12 @@ def test_browse_preview_search_download_and_security(archive):
         assert "tracker.invalid" not in detail["body_html"]
         assert "onerror" not in detail["body_html"]
         assert detail["attachments"] == [
-            {"name": "notes.bin", "content_type": "application/octet-stream"}
+            {
+                "id": 0,
+                "name": "notes.bin",
+                "content_type": "application/octet-stream",
+                "previewable": False,
+            }
         ]
         assert not detail["truncated"]
         raw = client.get(f"{base}/messages/1/raw")

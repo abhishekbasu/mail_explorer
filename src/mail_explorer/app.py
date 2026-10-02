@@ -2,11 +2,13 @@ import os
 import threading
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from .attachments import ENCODINGS, IMAGE_TYPES, attachment_chunks, attachments, disposition
 from .config import Settings
 from .index import MailboxCatalog, MailboxChanged
 from .messages import preview, raw_chunks
@@ -85,8 +87,9 @@ def create_app(
         after: int = Query(default=0, ge=0),
         limit: int = Query(default=50, ge=1, le=100),
         q: str = Query(default="", max_length=200),
+        before: int | None = Query(default=None, ge=1),
     ):
-        return catalog.get(mailbox_id).list_messages(after, limit, q)
+        return catalog.get(mailbox_id).list_messages(after, limit, q, before)
 
     @app.get("/api/mailboxes/{mailbox_id}/threads")
     def threads(
@@ -94,8 +97,9 @@ def create_app(
         after: str = Query(default="", pattern=r"^(?:-?\d{1,12}:\d{1,18})?$"),
         limit: int = Query(default=50, ge=1, le=100),
         q: str = Query(default="", max_length=200),
+        before: str = Query(default="", pattern=r"^(?:-?\d{1,12}:\d{1,18})?$"),
     ):
-        return catalog.get(mailbox_id).list_threads(after, limit, q)
+        return catalog.get(mailbox_id).list_threads(after, limit, q, before)
 
     @app.get("/api/mailboxes/{mailbox_id}/threads/{thread_id}/messages")
     def thread_messages(
@@ -103,8 +107,9 @@ def create_app(
         thread_id: int,
         after: str = Query(default="", pattern=r"^(?:-?\d{1,12}:\d{1,18})?$"),
         limit: int = Query(default=50, ge=1, le=100),
+        order: Literal["oldest", "newest"] = "oldest",
     ):
-        return catalog.get(mailbox_id).thread_messages(thread_id, after, limit)
+        return catalog.get(mailbox_id).thread_messages(thread_id, after, limit, order)
 
     @app.get("/api/mailboxes/{mailbox_id}/messages/{message_id}")
     def message(mailbox_id: str, message_id: int):
@@ -119,6 +124,37 @@ def create_app(
                 ) from exc
         index.ensure_current()
         return result
+
+    @app.get("/api/mailboxes/{mailbox_id}/messages/{message_id}/attachments/{attachment_id}")
+    def attachment(mailbox_id: str, message_id: int, attachment_id: int, download: bool = True):
+        index = catalog.get(mailbox_id)
+        record = index.message(message_id)
+        with preview_slots:
+            try:
+                item = next(
+                    (
+                        item
+                        for item in attachments(index.path, record, settings)
+                        if item.id == attachment_id
+                    ),
+                    None,
+                )
+            except (ValueError, RecursionError, TypeError) as exc:
+                raise HTTPException(
+                    422, "This attachment cannot be opened. Download the original message."
+                ) from exc
+        index.ensure_current()
+        if item is None:
+            raise HTTPException(404, "Attachment not found.")
+        if item.encoding not in ENCODINGS:
+            raise HTTPException(422, "Unsupported encoding. Download the original message.")
+        if not download and item.content_type not in IMAGE_TYPES:
+            raise HTTPException(415, "This file cannot be previewed. Download the attachment.")
+        return StreamingResponse(
+            attachment_chunks(index.path, item, settings.chunk_bytes),
+            media_type="application/octet-stream" if download else item.content_type,
+            headers={"Content-Disposition": disposition(item, download)},
+        )
 
     @app.get("/api/mailboxes/{mailbox_id}/messages/{message_id}/raw")
     def raw(mailbox_id: str, message_id: int):

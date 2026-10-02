@@ -361,9 +361,14 @@ class MailboxIndex:
         words = re.findall(r"[^\W_]+", query, flags=re.UNICODE)[:12]
         return " AND ".join(f'"{word}"*' for word in words)
 
-    def list_messages(self, after: int = 0, limit: int = 50, query: str = "") -> dict:
+    def list_messages(
+        self, after: int = 0, limit: int = 50, query: str = "", before: int | None = None
+    ) -> dict:
         self.ensure_current()
         expression = self.search_expression(query)
+        comparison, order, cursor = (
+            ("<", "DESC", before) if before is not None else (">", "ASC", after)
+        )
         with self.connection() as db:
             columns = (
                 "m.id, m.subject, m.sender, m.recipients, m.date, m.end - m.content_start AS size"
@@ -373,18 +378,27 @@ class MailboxIndex:
             elif expression:
                 rows = db.execute(
                     f"SELECT {columns} FROM message_search s JOIN messages m ON m.id = s.rowid "
-                    "WHERE message_search MATCH ? AND s.rowid > ? ORDER BY s.rowid LIMIT ?",
-                    (expression, after, limit + 1),
+                    f"WHERE message_search MATCH ? AND s.rowid {comparison} ? "
+                    f"ORDER BY s.rowid {order} LIMIT ?",
+                    (expression, cursor, limit + 1),
                 ).fetchall()
             else:
                 rows = db.execute(
-                    f"SELECT {columns} FROM messages m WHERE m.id > ? ORDER BY m.id LIMIT ?",
-                    (after, limit + 1),
+                    f"SELECT {columns} FROM messages m WHERE m.id {comparison} ? "
+                    f"ORDER BY m.id {order} LIMIT ?",
+                    (cursor, limit + 1),
                 ).fetchall()
         items = [dict(row) for row in rows[:limit]]
+        if before is not None:
+            items.reverse()
         return {
             "items": items,
-            "next_cursor": items[-1]["id"] if len(rows) > limit else None,
+            "next_cursor": items[-1]["id"]
+            if items and (before is not None or len(rows) > limit)
+            else None,
+            "previous_cursor": items[0]["id"]
+            if items and (len(rows) > limit if before is not None else after > 0)
+            else None,
             "status": self.status(),
         }
 
@@ -395,12 +409,16 @@ class MailboxIndex:
             "m.subject, m.sender, m.recipients, m.date, m.end-m.content_start AS size"
         )
 
-    def list_threads(self, after: str = "", limit: int = 50, query: str = "") -> dict:
+    def list_threads(
+        self, after: str = "", limit: int = 50, query: str = "", before: str = ""
+    ) -> dict:
         self.ensure_current()
         conditions, params = [], []
-        if after:
-            conditions.append("(t.latest_timestamp, t.latest_message_id) < (?, ?)")
-            params.extend(map(int, after.split(":")))
+        cursor = before or after
+        if cursor:
+            comparison = ">" if before else "<"
+            conditions.append(f"(t.latest_timestamp, t.latest_message_id) {comparison} (?, ?)")
+            params.extend(map(int, cursor.split(":")))
         expression = self.search_expression(query)
         if query.strip() and not expression:
             conditions.append("0")
@@ -416,21 +434,34 @@ class MailboxIndex:
                 f"SELECT {self._thread_columns()} FROM threads t "
                 "JOIN messages m ON m.id=t.latest_message_id"
                 + clause
-                + " ORDER BY t.latest_timestamp DESC, t.latest_message_id DESC LIMIT ?",
+                + (
+                    " ORDER BY t.latest_timestamp ASC, t.latest_message_id ASC LIMIT ?"
+                    if before
+                    else " ORDER BY t.latest_timestamp DESC, t.latest_message_id DESC LIMIT ?"
+                ),
                 (*params, limit + 1),
             ).fetchall()
         items = [dict(row) for row in rows[:limit]]
+        if before:
+            items.reverse()
         last = items[-1] if items else None
+        first = items[0] if items else None
         return {
             "items": items,
             "status": self.status(),
             "next_cursor": f"{last['latest_timestamp']}:{last['latest_message_id']}"
-            if len(rows) > limit
+            if items and (before or len(rows) > limit)
+            else None,
+            "previous_cursor": f"{first['latest_timestamp']}:{first['latest_message_id']}"
+            if items and (len(rows) > limit if before else after)
             else None,
         }
 
-    def thread_messages(self, thread_id: int, after: str = "", limit: int = 50) -> dict:
+    def thread_messages(
+        self, thread_id: int, after: str = "", limit: int = 50, order: str = "oldest"
+    ) -> dict:
         self.ensure_current()
+        comparison, direction = ("<", "DESC") if order == "newest" else (">", "ASC")
         with self.connection() as db:
             # A background merge must not change the group between these reads.
             db.execute("BEGIN")
@@ -447,11 +478,13 @@ class MailboxIndex:
                 raise KeyError("Conversation not found in the indexed portion of this mailbox.")
             clause, params = "", [thread_id]
             if after:
-                clause = " AND (sent_at, id) > (?, ?)"
+                clause = f" AND (sent_at, id) {comparison} (?, ?)"
                 params.extend(map(int, after.split(":")))
             rows = db.execute(
                 "SELECT id, subject, sender, recipients, date, sent_at, end-content_start AS size "
-                "FROM messages WHERE thread_id=?" + clause + " ORDER BY sent_at, id LIMIT ?",
+                "FROM messages WHERE thread_id=?"
+                + clause
+                + f" ORDER BY sent_at {direction}, id {direction} LIMIT ?",
                 (*params, limit + 1),
             ).fetchall()
         items = [dict(row) for row in rows[:limit]]
